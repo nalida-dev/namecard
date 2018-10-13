@@ -1,0 +1,21 @@
+def card_color():
+   color_dic = {}
+   color_dic['1'] = [253,115,34]
+   color_dic['2'] = [244,57,89]
+   color_dic['3'] = [252,57,80]
+   color_dic['4'] = [253,117,105]
+   color_dic['5'] = [252,181,165]
+   color_dic['6'] = [254,228,138]
+   color_dic['7'] = [254,203,47]
+   color_dic['8'] = [149,216,206]
+   color_dic['9'] = [163,185,152]
+   color_dic['10'] = [62,168,94]
+   color_dic['11'] = [14,112,131]
+   color_dic['12'] = [78,192,158]
+   color_dic['13'] = [162,178,231]
+   color_dic['14'] = [20,139,164]
+   color_dic['15'] = [56,64,127]
+   color_dic['16'] = [191,112,182]
+   color_dic['17'] = [23,14,29]
+   color_dic['18'] = [195,139,102]
+   return color_dic
