@@ -16,7 +16,7 @@ def separate(sentence):
 
 def create_namecard(number, initial, name, nickname, sentence, R, G, B, p):
     number = number.replace('-','')
-    color_code = 'RGB(' + R + ',' + G + ',' + B + ')'
+    color_code = 'RGB(' + (str)(R) + ',' + (str)(G) + ',' + (str)(B) + ')'
     image = Image.new("RGBA", (pixel(5.2*p), pixel(8.6*p)), color="RGB(230, 230, 230)")
     draw = ImageDraw.Draw(image)
     font = ImageFont.truetype('/home/juheon/fonts/NanumSquareR.ttf', 7*p)
