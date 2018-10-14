@@ -4,7 +4,9 @@ import os
 import re
 import threading
 
+from color_dic import color_dic
 from database_wrapper_redis import DatabaseWrapperRedis
+from send_mail import send_namecard
 
 from flask import Flask, jsonify, request, send_file
 from card import create_namecard
@@ -90,12 +92,24 @@ def message():
             return free_text("40자 이내")
         getset(user_key, 'intro', content)
         user_state(user_key, 'asked_color')
-        return free_text("색깔 (1-9)")
+        return jsonify({
+            "message": {
+                "text": "색깔 (1-18)",
+                "photo": {
+                    "url": "http://13.124.13.85/photo?filename={filename}".format(filename='pallete.png'),
+                    "width": 1148,
+                    "height": 610
+                }
+            },
+            "keyboard": {
+                "type": "text"
+            }
+        })
 
     if state == 'asked_color':
         try:
-            colors = [(i, i, i) for i in range(20, 181, 20)]
-            r, g, b = colors[int(content)-1]
+            print(content)
+            r, g, b = color_dic[content]
             getset(user_key, 'color-r', r) 
             getset(user_key, 'color-g', g) 
             getset(user_key, 'color-b', b) 
@@ -112,30 +126,48 @@ def message():
         color_b = getset(user_key, 'color-b')
             
         filename = 'tempfiles/{user_key}_{time}.png'.format(user_key=params["user_key"], time=time.time())
+        getset(user_key, 'filename', filename)
+
         create_namecard(number, initial, name, nick, intro, color_r, color_g, color_b, filename)
 
-        user_state(user_key, 'asked_email')
+        user_state(user_key, 'asked_to_confirm')
 
         return jsonify({
             "message": {
-                "text": "메일",
+                "text": "여기",
                 "photo": {
                     "url": "http://13.124.13.85/photo?filename={filename}".format(filename=filename),
-                    "width": 588,
-                    "height": 976
+                    "width": 589,
+                    "height": 975
                 }
             },
             "keyboard": {
-                "type": "text"
+                "type": "buttons",
+                "buttons": ["메일로 보내주세요!", "다시 만들어 주세요."]
             }
         })
+
+    if state == 'asked_to_confirm':
+        if content == '메일로 보내주세요!':
+            user_state(user_key, 'asked_email')
+            return free_text('메일')
+        else:
+            user_state(user_key, 'asked_number')
+            return free_text("번호")
     
     if state == 'asked_email':
-        # send email
+        filename = getset(user_key, 'filename')
+        try:
+            threading.Thread(target=send_namecard, args=(content, filename), daemon=True).start()
+            msg = '보냈음'
+        except Exception:
+            msg = '파일 유효기간이 만료되었거나 메일 주소에 문제가 있는 모양입니다. 다시 진행해주세요.'
+
         user_state(user_key, '')
+
         return jsonify({
             "message": {
-                "text": "보냈음"
+                "text": msg,
             },
             "keyboard": {
                 "type": "buttons",
