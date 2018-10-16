@@ -34,7 +34,7 @@ def create_namecard(number, initial, name, nickname, sentence, R, G, B, output_f
     for index, item in enumerate(separate(sentence)):
         if item[0] == ' ':
             item = item[1:]
-        draw.text((pixel(1.47*p), pixel(7.82*p+index*0.25*p)), item, file="RGB(255,255,255)", font=font_small)
+        draw.text((pixel(1.47*p), pixel(7.82*p+index*0.25*p)), item, fill="RGB(255,255,255)", font=font_small)
     draw.rectangle([(pixel(0.47*p), pixel(7.40*p)), (pixel(1.00*p), pixel(8.23*p))], fill=color_code)
     draw.rectangle([(pixel(0.40*p), pixel(7.33*p)), (pixel(1.00*p), pixel(8.23*p))], outline="RGB(255,255,255)")
     draw.rectangle([(pixel(0.47*p), pixel(7.40*p)), (pixel(1.07*p), pixel(8.30*p))], outline="RGB(255,255,255)")
