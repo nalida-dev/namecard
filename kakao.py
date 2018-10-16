@@ -160,7 +160,7 @@ def message():
     if state == 'asked_intro':
         if len(content) > 40:
             return send_msg("40자 이내로 입력해주세요.")
-        getset(user_key, 'intro', content)
+        getset(user_key, 'intro', content.replace('\n', ' ')
         user_state(user_key, 'asked_color')
         photo = {
             "url": "http://13.124.13.85/photo?filename={filename}".format(filename='pallete.png'),
