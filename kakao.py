@@ -20,7 +20,6 @@ import string_resources as sr
 app = Flask(__name__)
 db = DatabaseWrapperRedis(host='localhost', port=6380, db=0, namespace="namecard")
 
-pat_charset = re.compile('^[가-힣a-zA-Z0-9 ]*$')
 pat_alphabet = re.compile('^[a-zA-Z ]*$')
 pat_number = re.compile('^[0-9]*$')
 
@@ -125,14 +124,14 @@ def message():
             return send_msg(sr.WRONG_RESPONSE)
 
     if state == 'asked_name':
-        if len(content) > 8 or pat_charset.match(content) is None:
+        if len(content) > 8:
             return send_msg("8자 이내의 한글, 영문, 숫자로 입력해주세요.")
         getset(user_key, 'name', content)
         user_state(user_key, 'asked_nick')
         return send_msg(sr.ASK_NICK)
 
     if state == 'asked_nick':
-        if len(content) > 8 or pat_charset.match(content) is None:
+        if len(content) > 8:
             return send_msg("띄어쓰기 포함 8자 이내의 한글, 영문, 숫자로 입력해주세요.")
         if content.strip() == '없음':
             getset(user_key, 'nick', '')
@@ -159,7 +158,7 @@ def message():
         return send_msg(sr.ASK_INTRO)
 
     if state == 'asked_intro':
-        if len(content) > 40 or pat_charset.match(content) is None:
+        if len(content) > 40:
             return send_msg("40자 이내로 입력해주세요.")
         getset(user_key, 'intro', content)
         user_state(user_key, 'asked_color')
