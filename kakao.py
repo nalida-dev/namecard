@@ -3,16 +3,23 @@ import sys
 import os
 import re
 import threading
+import random
 
 from color_dic import color_dic
 from database_wrapper_redis import DatabaseWrapperRedis
-from send_mail import send_namecard
+from send_mail import send_namecard, send_auth
 
 from flask import Flask, jsonify, request, send_file
 from card import create_namecard
 
+import string_resources as sr
+
 app = Flask(__name__)
 db = DatabaseWrapperRedis(host='localhost', port=6380, db=0, namespace="namecard")
+
+pat_charset = re.compile('^[가-힣a-zA-Z0-9 ]*$')
+pat_alphabet = re.compile('^[a-zA-Z ]*$')
+pat_number = re.compile('^[0-9]*$')
 
 @app.route("/keyboard", methods=["GET"])
 def keyboard():
@@ -31,14 +38,15 @@ def getset(user_key, key, value=None):
 def user_state(user_key, value=None):
     return getset(user_key, 'userstate', value)
 
-def is_valid_number(number):
+def to_valid_number(number):
     number = number.replace(" ", "").replace("-", "")
-    if len(number) != 11:
-        return False
-    for c in number:
-        if c not in "0123456789":
-            return False
-    return True
+    if len(number) <= 9 or 12 <= len(number):
+        return None
+    if pat_number.match(number) is None:
+        return None
+    if len(number) == 10:
+        number = number[:6] + ' ' + number[6:]
+    return number
 
 def send_msg(text, photo=None, buttons=None):
     ret = {
@@ -54,45 +62,89 @@ def send_msg(text, photo=None, buttons=None):
 def message():
     params = request.get_json()
     if params["type"] == 'photo':
-        return send_msg("사진 업로드는 지원되지 않습니다.")
+        return send_msg(sr.PHOTO_NONO)
     user_key = params["user_key"]
     content = params["content"]
     state = user_state(user_key)
     if state == '':
-        user_state(user_key, 'asked_number')
-        return send_msg("번호")
+        user_state(user_key, 'greetings')
+        return send_msg(sr.HELLO, buttons=["반가워!"])
+    
+    if state == 'greetings':
+        user_state(user_key, 'pro_namecarder')
+        return send_msg(sr.I_AM_PRO_NAMECARDER,
+            buttons=["그렇구나! 명함 어서 만들어 줘!"])
+    
+    if state == 'pro_namecarder':
+        user_state(user_key, 'asked_tmi')
+        return send_msg(sr.DO_YOU_WANT_NALIDA_DETAIL,
+                buttons=["네!", "아니요!"])
 
-    if state == 'asked_number':
-        if not is_valid_number(content):
-            return send_msg("제대로")
-        getset(user_key, 'number', content)
-        user_state(user_key, 'asked_name')
-        return send_msg("이름 (8자 이내)")
+    if state == 'asked_tmi':
+        user_state(user_key, 'tmi_done')
+        if content == '네!':
+            return send_msg(sr.NALIDA_TMI,
+                buttons=["고마워! 그래서 명함은 언제 주는 거야?"])
+        elif content == '아니요!':
+            return send_msg(sr.OKAY_BYE,
+                buttons=["고마워! 그래서 명함은 언제 주는 거야?"])
+
+    if state == 'tmi_done':
+        user_state(user_key, 'asked_personal_okay')
+        return send_msg(sr.PERSONAL_INFO_OKAY,
+                buttons=["응!"])
+
+    if state == 'asked_personal_okay':
+        user_state(user_key, 'asked_if_agree')
+        return send_msg(sr.AGREE_STATEMENT)
+
+    if state == 'asked_if_agree':
+        if content.strip() == '1':
+            user_state(user_key, 'asked_name')
+            return send_msg(sr.ASK_NAME)
+        elif content.strip() == '2':
+            user_state(user_key, '')
+            return send_msg(sr.OKAY_BYE_2)
+        else:
+            return send_msg(sr.WRONG_RESPONSE)
 
     if state == 'asked_name':
-        if len(content) > 8:
-            return send_msg("8자 이내")
+        if len(content) > 8 or pat_charset.match(content) is None:
+            return send_msg("8자 이내의 한글, 영문, 숫자로 입력해주세요.")
         getset(user_key, 'name', content)
-        user_state(user_key, 'asked_initial')
-        return send_msg("이니셜 (영문 1자)")
-
-    if state == 'asked_initial':
-        if len(content) != 1:
-            return send_msg("1자")
-        getset(user_key, 'initial', content)
         user_state(user_key, 'asked_nick')
-        return send_msg("별명 (8자 이내)")
+        return send_msg(sr.ASK_NICK)
 
     if state == 'asked_nick':
-        if len(content) > 8:
-            return send_msg("8자 이내")
-        getset(user_key, 'nick', content)
+        if len(content) > 8 or pat_charset.match(content) is None:
+            return send_msg("띄어쓰기 포함 8자 이내의 한글, 영문, 숫자로 입력해주세요.")
+        if content.strip() == '없음':
+            getset(user_key, 'nick', '')
+            user_state(user_key, 'asked_initial')
+            return send_msg(sr.ASK_INITIAL_NO_NICK)
+        else:
+            getset(user_key, 'nick', content)
+            user_state(user_key, 'asked_initial')
+            return send_msg(sr.ASK_INITIAL)
+
+    if state == 'asked_initial':
+        if len(content) != 1 or pat_alphabet.match(content) is None:
+            return send_msg("1글자의 영문 알파벳만 입력해주세요.")
+        getset(user_key, 'initial', content)
+        user_state(user_key, 'asked_number')
+        return send_msg(sr.ASK_NUMBER)
+
+    if state == 'asked_number':
+        content = to_valid_number(content)
+        if content is None:
+            return send_msg("전화번호를 올바르게 입력해주세요")
+        getset(user_key, 'number', content)
         user_state(user_key, 'asked_intro')
-        return send_msg("한줄 자기소개 (40자 이내)")
+        return send_msg(sr.ASK_INTRO)
 
     if state == 'asked_intro':
-        if len(content) > 40:
-            return send_msg("40자 이내")
+        if len(content) > 40 or pat_charset.match(content) is None:
+            return send_msg("40자 이내로 입력해주세요.")
         getset(user_key, 'intro', content)
         user_state(user_key, 'asked_color')
         photo = {
@@ -100,7 +152,7 @@ def message():
             "width": 1148,
             "height": 610
         }
-        return send_msg("색깔 (1-18)", photo)
+        return send_msg(sr.ASK_COLOR, photo)
 
     if state == 'asked_color':
         try:
@@ -110,7 +162,7 @@ def message():
             getset(user_key, 'color-g', g) 
             getset(user_key, 'color-b', b) 
         except Exception:
-            return send_msg("제대로")
+            return send_msg("1부터 18 사이의 번호로 골라주세요.")
 
         number = getset(user_key, 'number')
         initial = getset(user_key, 'initial')
@@ -132,23 +184,36 @@ def message():
             "width": 589,
             "height": 975
         }
-        return send_msg("여기", photo, ["메일로 보내주세요!", "다시 만들어 주세요."])
+        return send_msg(sr.HAO_MA, photo, ["응!", "아니 괜찮아!"])
 
     if state == 'asked_to_confirm':
-        if content == '메일로 보내주세요!':
+        if content == '응!':
             user_state(user_key, 'asked_email')
-            return send_msg('메일')
+            return send_msg(sr.EMAIL_PLEASE)
         else:
-            user_state(user_key, 'asked_number')
-            return send_msg("번호")
+            user_state(user_key, '')
+            return send_msg(sr.OKAY_BYE_2)
     
     if state == 'asked_email':
-        filename = getset(user_key, 'filename')
-        try:
-            threading.Thread(target=send_namecard, args=(content, filename), daemon=True).start()
-            msg = '보냈음'
-        except Exception:
-            msg = '파일 유효기간이 만료되었거나 메일 주소에 문제가 있는 모양입니다. 다시 진행해주세요.'
+        user_state(user_key, 'asked_auth')
+        auth_key = "%06d" % random.randint(0, 999999)
+        getset(user_key, 'email', content)
+        getset(user_key, 'auth_key', auth_key)
+        threading.Thread(target=send_auth, args=(content, auth_key), daemon=True).start()
+        return send_msg(sr.AUTH_PLEASE)
+
+    if state == 'asked_auth':
+        auth_key = getset(user_key, 'auth_key')
+        if content.strip() == auth_key:
+            filename = getset(user_key, 'filename')
+            email = getset(user_key, 'email')
+            try:
+                threading.Thread(target=send_namecard, args=(content, filename), daemon=True).start()
+                msg = sr.CHECK_YOUR_MAIL
+            except Exception:
+                msg = '파일 유효기간이 만료되었거나 메일 주소에 문제가 있는 것 같아요. 처음부터 다시 진행해주세요 ㅠㅠ'
+        else:
+            msg = '인증코드가 잘못되었습니다. 처음부터 다시 진행해주세요 ㅠㅠ'
 
         user_state(user_key, '')
         return send_msg(msg, buttons=["명함 만들어주세요."])
