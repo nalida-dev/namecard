@@ -5,12 +5,15 @@ import re
 import threading
 import random
 
+import requests
+
 from color_dic import color_dic
 from database_wrapper_redis import DatabaseWrapperRedis
 from send_mail import send_namecard, send_auth
 
 from flask import Flask, jsonify, request, send_file
 from card import create_namecard
+from credentials import api_base, monitoring_room_id
 
 import string_resources as sr
 
@@ -20,6 +23,19 @@ db = DatabaseWrapperRedis(host='localhost', port=6380, db=0, namespace="namecard
 pat_charset = re.compile('^[가-힣a-zA-Z0-9 ]*$')
 pat_alphabet = re.compile('^[a-zA-Z ]*$')
 pat_number = re.compile('^[0-9]*$')
+
+def report(text):
+    t = threading.Thread(target = requests.post,
+        args = (api_base + 'sendMessage', ),
+        kwargs = {
+            'data': {
+                "chat_id" : monitoring_room_id,
+                "text" : text
+                }
+            }
+        )
+    t.setDaemon(True)
+    t.start()
 
 @app.route("/keyboard", methods=["GET"])
 def keyboard():
@@ -184,6 +200,8 @@ def message():
             "width": 589,
             "height": 975
         }
+        report("{user_key}/{name}/{nick}/{initial}/{intro}/({r},{g},{b})".format(
+            user_key=user_key, name=name, nick=nick, initial=initial, intro=intro, r=color_r, g=color_g, b=color_b))
         return send_msg(sr.HAO_MA, photo, ["응!", "아니 괜찮아!"])
 
     if state == 'asked_to_confirm':
@@ -208,7 +226,7 @@ def message():
             filename = getset(user_key, 'filename')
             email = getset(user_key, 'email')
             try:
-                threading.Thread(target=send_namecard, args=(content, filename), daemon=True).start()
+                threading.Thread(target=send_namecard, args=(email, filename), daemon=True).start()
                 msg = sr.CHECK_YOUR_MAIL
             except Exception:
                 msg = '파일 유효기간이 만료되었거나 메일 주소에 문제가 있는 것 같아요. 처음부터 다시 진행해주세요 ㅠㅠ'
@@ -234,7 +252,7 @@ if 'tempfiles' not in os.listdir():
     os.mkdir('tempfiles')
 
 def auto_delete():
-    threshold = 60 # in seconds
+    threshold = 3600 # in seconds
     pat = re.compile("^([a-zA-Z0-9]+)_([0-9.]+)\.png")
     while True:
         for filename in os.listdir('tempfiles'):
