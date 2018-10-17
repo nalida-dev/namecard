@@ -1,3 +1,6 @@
 *.ttf
 credentials.py
+nalida/
+tempfiles/
+__pycache__/
 
