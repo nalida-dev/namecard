@@ -145,7 +145,7 @@ def message():
     if state == 'asked_initial':
         if len(content) != 1 or pat_alphabet.match(content) is None:
             return send_msg("1글자의 영문 알파벳만 입력해주세요.")
-        getset(user_key, 'initial', content)
+        getset(user_key, 'initial', content.upper())
         user_state(user_key, 'asked_number')
         return send_msg(sr.ASK_NUMBER)
 
