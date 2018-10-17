@@ -141,7 +141,7 @@ def message():
 
     if state == 'asked_name':
         if len(content) > 8:
-            return send_msg("8자 이내의 한글, 영문, 숫자로 입력해주세요.")
+            return send_msg("띄어쓰기 포함 8자 이내의 한글, 영문, 숫자로 입력해주세요.")
         getset(user_key, 'name', content)
         user_state(user_key, 'asked_nick')
         return send_msg(sr.ASK_NICK)
