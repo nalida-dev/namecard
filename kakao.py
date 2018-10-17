@@ -48,6 +48,7 @@ threading.Thread(target=check_report_queue, args=(), daemon=True).start()
 
 def report(text):
     report_queue.put(text)
+    db.lpush('reports', text)
 
 def getset(user_key, key, value=None):
     if value is None:
@@ -187,7 +188,6 @@ def message():
 
     if state == 'asked_color':
         try:
-            print(content)
             r, g, b = color_dic[content]
             getset(user_key, 'color-r', r) 
             getset(user_key, 'color-g', g) 
