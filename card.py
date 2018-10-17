@@ -6,6 +6,13 @@ def pixel(cm):
 
 
 def separate(sentence):
+    words = sentence.split()
+    for i in range(len(words)-1,0,-1):
+        left = ' '.join(words[:i])
+        right = ' '.join(words[i:])
+        if len(left) <= 22 and len(right) <= 22:
+            return [left, right]
+
     if len(sentence) > 22:
         return [sentence[:22], sentence[22:]]
     else:
