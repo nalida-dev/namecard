@@ -235,6 +235,8 @@ def message():
         user_state(user_key, '')
         return send_msg(msg, buttons=["명함 만들어주세요."])
 
+    print(user_key, state, content)
+
 @app.route("/photo", methods=["GET"])
 def photo():
     filename = request.args.get("filename")
@@ -251,19 +253,16 @@ if 'tempfiles' not in os.listdir():
     os.mkdir('tempfiles')
 
 def auto_delete():
-    threshold = 3600 # in seconds
+    period = 600 # in seconds
     pat = re.compile("^([a-zA-Z0-9]+)_([0-9.]+)\.png")
+
     while True:
-        for filename in os.listdir('tempfiles'):
-            m = pat.match(filename)
-            if m is None:
-                continue
-            user_key, then = m.group(1), float(m.group(2))
-            now = time.time()
-            if now - then > threshold:
-                os.remove('tempfiles/' + filename)
-                print("[auto_delete] deleted {filename}".format(filename=filename))
-        time.sleep(threshold)
+        filenames = sorted([(-float(pat.match(filename).group(2)), filename) for filename in os.listdir('tempfiles') if pat.match(filename) is not None])
+        while len(filenames) > 1000:
+            filename = filenames.pop()[1]
+            os.remove('tempfiles/' + filename)
+            print("[auto_delete] deleted {filename}".format(filename=filename))
+        time.sleep(period)
 threading.Thread(target=auto_delete, args=(), daemon=True).start()
 
 app.run(host=sys.argv[1], port=sys.argv[2])
