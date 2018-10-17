@@ -1,17 +1,29 @@
 import smtplib 
 import shutil
 import os
+import random
 from email.mime.multipart import MIMEMultipart 
 from email.mime.text import MIMEText 
 from email.mime.base import MIMEBase 
 from email import encoders 
 
+from string import ascii_letters
+
 from credentials import gmail_password
 # make a file named `credentials.py` and add a line as:
 # gmail_password = "GMAIL_PASSWORD"
 
+try:
+    os.mkdir('nalida')
+except Exception:
+    pass
+
+def random_string(n):
+    return ''.join(random.choice(ascii_letters) for _ in range(n))
+
 
 def send_namecard(user_mail, file_path):
+    send_as = 'nalida/' + random_string(5) + '.png'
     try:
         fromaddr = 'nalidaofficial@gmail.com'
         toaddr = user_mail
@@ -21,7 +33,8 @@ def send_namecard(user_mail, file_path):
         msg['Subject'] = "[날리다] 명함 제작 이미지 파일 전송"
         body = "자기이해 워크샵 날리다에 관심을 가져주셔서 감사합니다. \n\n답변해 주신 내용을 바탕으로 제작된 명함을 보내드립니다. \n\n감사합니다. \n \n \n \n 날리다 : 나를알리다 드림"
         msg.attach(MIMEText(body, 'plain')) 
-        filename = file_path
+        shutil.copyfile(file_path, send_as)
+        filename = send_as
         attachment = open(file_path, "rb") 
         p = MIMEBase('application', 'octet-stream') 
         p.set_payload((attachment).read()) 
