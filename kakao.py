@@ -135,7 +135,7 @@ def message():
             return send_msg(sr.ASK_NAME)
         elif content.strip() == '2':
             user_state(user_key, '')
-            return send_msg(sr.OKAY_BYE_2)
+            return send_msg(sr.OKAY_BYE_2, buttons=['명함 만들어주세요.'])
         else:
             return send_msg(sr.WRONG_RESPONSE)
 
@@ -225,7 +225,7 @@ def message():
             return send_msg(sr.EMAIL_PLEASE)
         else:
             user_state(user_key, '')
-            return send_msg(sr.OKAY_BYE_2)
+            return send_msg(sr.OKAY_BYE_2, buttons=['명함 만들어주세요.'])
     
     if state == 'asked_email':
         user_state(user_key, 'asked_auth')
