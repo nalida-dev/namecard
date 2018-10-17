@@ -36,13 +36,6 @@ def report(text):
     t.setDaemon(True)
     t.start()
 
-@app.route("/keyboard", methods=["GET"])
-def keyboard():
-    return jsonify({
-        "type": "buttons",
-        "buttons": ["명함 만들어주세요."]
-    })
-
 def getset(user_key, key, value=None):
     if value is None:
         v = db.get("{user_key}:{key}".format(user_key=user_key, key=key))
@@ -62,6 +55,13 @@ def to_valid_number(number):
     if len(number) == 10:
         number = number[:6] + ' ' + number[6:]
     return number
+
+@app.route("/keyboard", methods=["GET"])
+def keyboard():
+    return jsonify({
+        "type": "buttons",
+        "buttons": ["명함 만들어주세요."]
+    })
 
 def send_msg(text, photo=None, buttons=None):
     ret = {
@@ -102,6 +102,9 @@ def message():
                 buttons=["고마워! 그래서 명함은 언제 주는 거야?"])
         elif content == '아니요!':
             return send_msg(sr.OKAY_BYE,
+                buttons=["고마워! 그래서 명함은 언제 주는 거야?"])
+        else:
+            return send_msg(sr.NALIDA_TMI,
                 buttons=["고마워! 그래서 명함은 언제 주는 거야?"])
 
     if state == 'tmi_done':
@@ -235,7 +238,9 @@ def message():
         user_state(user_key, '')
         return send_msg(msg, buttons=["명함 만들어주세요."])
 
-    print(user_key, state, content)
+    # This code shouldn't be reached in normal cases
+    user_state(user_key, 'greetings')
+    return send_msg(sr.HELLO, buttons=["반가워!"])
 
 @app.route("/photo", methods=["GET"])
 def photo():
