@@ -4,6 +4,7 @@ import os
 import re
 import threading
 import random
+import queue
 
 import requests
 
@@ -23,18 +24,30 @@ db = DatabaseWrapperRedis(host='localhost', port=6380, db=0, namespace="namecard
 pat_alphabet = re.compile('^[a-zA-Z ]*$')
 pat_number = re.compile('^[0-9]*$')
 
+
+report_queue = queue.Queue()
+
+def check_report_queue():
+    while True:
+        if not report_queue.empty():
+            text = report_queue.get()
+            t = threading.Thread(target = requests.post,
+                args = (api_base + 'sendMessage', ),
+                kwargs = {
+                    'data': {
+                        "chat_id" : monitoring_room_id,
+                        "text" : text
+                        }
+                    }
+                )
+            t.setDaemon(True)
+            t.start()
+        time.sleep(1)
+
+threading.Thread(target=check_report_queue, args=(), daemon=True).start()
+
 def report(text):
-    t = threading.Thread(target = requests.post,
-        args = (api_base + 'sendMessage', ),
-        kwargs = {
-            'data': {
-                "chat_id" : monitoring_room_id,
-                "text" : text
-                }
-            }
-        )
-    t.setDaemon(True)
-    t.start()
+    report_queue.put(text)
 
 def getset(user_key, key, value=None):
     if value is None:
