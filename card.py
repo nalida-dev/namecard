@@ -7,17 +7,15 @@ def pixel(cm):
 
 def separate(sentence):
     words = sentence.split()
-    for i in range(len(words)-1,0,-1):
-        left = ' '.join(words[:i])
-        right = ' '.join(words[i:])
-        if len(left) <= 22 and len(right) <= 22:
-            return [left, right]
-
-    if len(sentence) > 22:
-        return [sentence[:22], sentence[22:]]
-    else:
+    if len(sentence) <= 22:
         return [sentence]
-
+    else:
+        for i in range(len(words)-1,0,-1):
+            left = ' '.join(words[:i])
+            right = ' '.join(words[i:])
+            if len(left) <= 22 and len(right) <= 22:
+                return [left, right]
+        return [sentence[:22], sentence[22:]]
 
 def create_namecard(number, initial, name, nickname, sentence, R, G, B, output_filename, p=4):
     number = number.replace('-','')
